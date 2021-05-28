@@ -105,7 +105,8 @@ public class ApplicationContextUtil implements ApplicationContextAware {
         createBean(defaultListableBeanFactory, bean,  module);
     }
 
-    public void createBean(DefaultListableBeanFactory defaultListableBeanFactory, RequestMappingHandlerMapping requestMappingHandlerMapping,  String module) throws ClassNotFoundException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    public void createBean(DefaultListableBeanFactory defaultListableBeanFactory,
+                           RequestMappingHandlerMapping requestMappingHandlerMapping,  String module) throws ClassNotFoundException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
         ClassObject objClassName = objcetMap.getObjClassName(module);
         if (objClassName == null) {
             return;
@@ -120,40 +121,56 @@ public class ApplicationContextUtil implements ApplicationContextAware {
             defaultListableBeanFactory.getBean(aClass);
         } catch (NoSuchBeanDefinitionException e) {
             e.printStackTrace();
-            Object bean = defaultListableBeanFactory.createBean(aClass);
-            defaultListableBeanFactory.registerSingleton(beanName, bean);
-            // 找到处理该路由的方法
-            Method targetMethod = ReflectionUtils.findMethod(aClass, "hello");
-            PatternsRequestCondition patternsRequestCondition = new PatternsRequestCondition("/test");
-            RequestMethodsRequestCondition requestMethodsRequestCondition = new RequestMethodsRequestCondition();
-            ParamsRequestCondition paramsRequestCondition = new ParamsRequestCondition();
-            HeadersRequestCondition headersRequestCondition = new HeadersRequestCondition();
-            ConsumesRequestCondition consumesRequestCondition = new ConsumesRequestCondition();
-            ProducesRequestCondition producesRequestCondition = new ProducesRequestCondition();
-            MediaTypeExpression mediaTypeExpression = new MediaTypeExpression() {
-                @Override
-                public MediaType getMediaType() {
-                    return MediaType.APPLICATION_JSON_UTF8;
-                }
-                @Override
-                public boolean isNegated() {
-                    return false;
-                }
-            };
-            producesRequestCondition.getExpressions().add(mediaTypeExpression);
-            RequestMappingInfo requestMappingInfo = new RequestMappingInfo(beanName, patternsRequestCondition, requestMethodsRequestCondition, paramsRequestCondition, headersRequestCondition, consumesRequestCondition, producesRequestCondition, null);
-            autowiredAnnotationBeanPostProcessor.processInjection(bean);
 
             BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(aClass);
             defaultListableBeanFactory.registerBeanDefinition(aClass.getName(), beanDefinitionBuilder.getBeanDefinition());
 
-            Class<? extends RequestMappingHandlerMapping> mappingClass = requestMappingHandlerMapping.getClass();
-            Class<?> superclass = mappingClass.getSuperclass().getSuperclass();
-            Method detectHandlerMethods = superclass.getDeclaredMethod("detectHandlerMethods", Object.class);
-            detectHandlerMethods.setAccessible(true);
-            detectHandlerMethods.invoke(requestMappingHandlerMapping, aClass.getName());
+            Object bean = defaultListableBeanFactory.createBean(aClass);
+            defaultListableBeanFactory.registerSingleton(beanName, bean);
+
+            RequestMappingInfo requestMappingInfo = createRequestMappingInfo(beanName);
+
+            // 找到处理该路由的方法
+            Method targetMethod = ReflectionUtils.findMethod(aClass, "hello");
+
+            //注入该类的属性
+            autowiredAnnotationBeanPostProcessor.processInjection(bean);
+
+            //反射获取Mapping detectHandlerMethods 方法使Controller 映射
+            reflex(requestMappingHandlerMapping, aClass);
+
             requestMappingHandlerMapping.registerMapping(requestMappingInfo, bean ,targetMethod);
         }
+    }
+
+    private RequestMappingInfo createRequestMappingInfo(String beanName) {
+        PatternsRequestCondition patternsRequestCondition = new PatternsRequestCondition("/test");
+        RequestMethodsRequestCondition requestMethodsRequestCondition = new RequestMethodsRequestCondition();
+        ParamsRequestCondition paramsRequestCondition = new ParamsRequestCondition();
+        HeadersRequestCondition headersRequestCondition = new HeadersRequestCondition();
+        ConsumesRequestCondition consumesRequestCondition = new ConsumesRequestCondition();
+        ProducesRequestCondition producesRequestCondition = new ProducesRequestCondition();
+        MediaTypeExpression mediaTypeExpression = new MediaTypeExpression() {
+            @Override
+            public MediaType getMediaType() {
+                return MediaType.APPLICATION_JSON_UTF8;
+            }
+            @Override
+            public boolean isNegated() {
+                return false;
+            }
+        };
+        producesRequestCondition.getExpressions().add(mediaTypeExpression);
+        RequestMappingInfo requestMappingInfo = new RequestMappingInfo(beanName, patternsRequestCondition, requestMethodsRequestCondition, paramsRequestCondition, headersRequestCondition, consumesRequestCondition, producesRequestCondition, null);
+        return requestMappingInfo;
+    }
+
+    public void reflex(RequestMappingHandlerMapping requestMappingHandlerMapping, Class<?> aClass) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Class<? extends RequestMappingHandlerMapping> mappingClass = requestMappingHandlerMapping.getClass();
+        Class<?> superclass = mappingClass.getSuperclass().getSuperclass();
+        Method detectHandlerMethods = superclass.getDeclaredMethod("detectHandlerMethods", Object.class);
+        detectHandlerMethods.setAccessible(true);
+        detectHandlerMethods.invoke(requestMappingHandlerMapping, aClass.getName());
     }
 
 }
