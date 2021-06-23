@@ -37,4 +37,7 @@ public class ClassParam {
     public void setBeanName(String beanName) {
         this.beanName = beanName;
     }
+
+
+
 }

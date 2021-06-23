@@ -1,6 +1,6 @@
 package com.excample.module.controller;
 
-import com.excample.module.core.ApplicationContextUtil;
+import com.excample.module.core.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,20 +16,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class LoadController {
 
     @Autowired
-    private ApplicationContextUtil applicationUtil;
+    private ProcesserFilter filter;
 
     @PostMapping("/get")
     public Object get(@RequestBody Param param) {
-        String module = param.getModule();
-        Object bean = applicationUtil.getBean(module);
+        RequestProcessor filter = this.filter.getFilter(Config.HTTP_MAP);
+        ModuleContext<Param> moduleContext = new ModuleContext();
+        Object bean = filter.processor(moduleContext);
         return bean;
     }
 
     @PostMapping("/refresh")
     public String refresh(@RequestBody Param param) {
-        String module = param.getModule();
         try {
-            applicationUtil.createBean(module);
+            RequestProcessor filter = this.filter.getFilter(Config.HTTP_MAP);
+            ModuleContext<Param> moduleContext = new ModuleContext();
+            moduleContext.setData(param);
+            filter.processor(moduleContext);
         } catch (Exception e) {
             e.printStackTrace();
             return "error";
@@ -40,9 +43,12 @@ public class LoadController {
 
     @PostMapping("/destroy")
     public String destroy(@RequestBody Param param) {
+        RequestProcessor filter = this.filter.getFilter(Config.HTTP_MAP);
         String module = param.getModule();
+        ModuleContext<Param> moduleContext = new ModuleContext();
         try {
-            applicationUtil.destroyBean(module);
+            filter.processor(moduleContext);
+            //applicationUtil.destroyBean(module);
         } catch (Exception e) {
             e.printStackTrace();
             return "error";
@@ -56,7 +62,7 @@ public class LoadController {
         String classPath = param.getClassPath();
         String beanName = param.getBeanName();
         try {
-            applicationUtil.loadClass(module, beanName, classPath);
+            //applicationUtil.loadClass(module, beanName, classPath);
         } catch (Exception e) {
             e.printStackTrace();
             return "error";

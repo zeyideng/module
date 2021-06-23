@@ -1,4 +1,4 @@
-package com.excample.module.core;
+package com.excample.module.core.loader;
 
 import java.io.File;
 import java.lang.reflect.Method;

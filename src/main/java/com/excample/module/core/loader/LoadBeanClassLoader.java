@@ -1,4 +1,4 @@
-package com.excample.module.core;
+package com.excample.module.core.loader;
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
